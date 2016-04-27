@@ -17,24 +17,21 @@ link_libraries(
 )
 
 set(SOURCE_LIB
-        #server
         lib_socket.c
         lib_socket.h
         )
 
-set(SOURCE_FILES_SERVER
-        #server
-        server_lipo.h
-        server_lipo.c
+set(SOURCE_FILES_MORTISE
+        mortise.h
+        mortise.c
         )
-add_executable(lipod ${SOURCE_FILES_SERVER} ${SOURCE_LIB})
+add_executable(mortise ${SOURCE_FILES_MORTISE} ${SOURCE_LIB})
 
-set(SOURCE_FILES_CLIENT
-        #service
-        client_lipo.h
-        client_lipo.c
+set(SOURCE_FILES_TENON
+        tenon.h
+        tenon.c
 )
-add_executable(lipo ${SOURCE_FILES_CLIENT} ${SOURCE_LIB})
-target_link_libraries(lipo ${CMAKE_THREAD_LIBS_INIT})
+add_executable(tenon ${SOURCE_FILES_TENON} ${SOURCE_LIB})
+target_link_libraries(tenon ${CMAKE_THREAD_LIBS_INIT})
 
 #add_library(liblipo SHARED ${SOURCE_FILES_SERVER})

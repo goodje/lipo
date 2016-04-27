@@ -2,7 +2,7 @@
 // Created by Liuwenjie on 4/24/16.
 //
 
-#include "client_lipo.h"
+#include "tenon.h"
 
 
 /* catch SIGINT and set stop to signal_id
@@ -58,7 +58,7 @@ void printstats(struct statistics *stats)
 /* create a TCP socket with non blocking options and connect it to the target
 * if succeed, add the socket in the epoll list and exit with 0
 */
-int create_and_connect(struct sockaddr_in target, int *epfd, struct lipod_conn *conn)
+int create_and_connect(struct sockaddr_in target, int *epfd, struct mortise_conn *conn)
 {
     int yes = 1;
     int sock;
@@ -113,7 +113,7 @@ int create_and_connect(struct sockaddr_in target, int *epfd, struct lipod_conn *
         //Edgvent.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLERR;
 
         Edgvent.data.fd = sock;
-//        Edgvent.data.ptr = conn;
+        Edgvent.data.u32 = EVENT_TYPE_MAO_CONN;
 
         // add the socket to the epoll file descriptors
         if (epoll_ctl((int) epfd, EPOLL_CTL_ADD, sock, &Edgvent) != 0)
@@ -160,6 +160,13 @@ int signal_init()
     return 0;
 }
 
+int get_conn(int fd)
+{
+    struct mortise_conn *G_lipod_cons;
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 3)
@@ -190,7 +197,7 @@ int main(int argc, char *argv[])
     float elapsedtime;
 
 
-    struct lipod_conn *G_lipod_cons = malloc(sizeof(struct lipod_conn) * maxconn);
+    struct mortise_conn *G_lipod_cons = malloc(sizeof(struct mortise_conn) * maxconn);
 
     signal_init();
 
@@ -213,7 +220,7 @@ int main(int argc, char *argv[])
 
     // create and connect as much as needed
     for (i = 0; i < maxconn; i++)
-        if (create_and_connect(target, (int *) epfd, (struct lipod_conn*)&G_lipod_cons[i]) != 0)
+        if (create_and_connect(target, (int *) epfd, (struct mortise_conn*)&G_lipod_cons[i]) != 0)
         {
             perror("create and connect");
             exit(1);
@@ -321,7 +328,7 @@ int main(int argc, char *argv[])
                 else
                     stats.nbsock--;
 
-                if (create_and_connect(target, (int *) epfd, (struct lipod_conn*)&G_lipod_cons[0]) != 0)
+                if (create_and_connect(target, (int *) epfd, (struct mortise_conn*)&G_lipod_cons[0]) != 0)
                 {
                     perror("create and connect");
                     continue;

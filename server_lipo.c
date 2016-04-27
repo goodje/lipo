@@ -102,7 +102,7 @@ void main()
                 {
                     printf("size: %d, data: %s\n", (int)len, buffer);
 
-                    //write(sockfd, buffer, len);
+                    write(sockfd, buffer, len);
                 }
 
                 //ev.data.fd = sockfd;

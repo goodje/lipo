@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 2.8)
 
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../../../bin)
 
+find_package(Threads REQUIRED)
+
+
 include_directories(
 )
 
@@ -32,6 +35,6 @@ set(SOURCE_FILES_CLIENT
         client_lipo.c
 )
 add_executable(lipo ${SOURCE_FILES_CLIENT} ${SOURCE_LIB})
-
+target_link_libraries(lipo ${CMAKE_THREAD_LIBS_INIT})
 
 #add_library(liblipo SHARED ${SOURCE_FILES_SERVER})

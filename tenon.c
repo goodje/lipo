@@ -82,6 +82,9 @@ int create_and_connect(struct sockaddr_in target, int *epfd, struct mortise_conn
     }
 
     conn->socket_fd = sock;
+    conn->status = MORTISE_CONN_DEFAULT;
+    conn->mortise_port = target.sin_port;
+    conn->mortise_ip = target.sin_addr.s_addr;
 
     if (connect(sock, (struct sockaddr *) &target, sizeof(struct sockaddr)) == -1
         && errno != EINPROGRESS)
@@ -113,7 +116,6 @@ int create_and_connect(struct sockaddr_in target, int *epfd, struct mortise_conn
         //Edgvent.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLERR;
 
         Edgvent.data.fd = sock;
-        Edgvent.data.u32 = EVENT_TYPE_MAO_CONN;
 
         // add the socket to the epoll file descriptors
         if (epoll_ctl((int) epfd, EPOLL_CTL_ADD, sock, &Edgvent) != 0)
@@ -121,6 +123,8 @@ int create_and_connect(struct sockaddr_in target, int *epfd, struct mortise_conn
             perror("epoll_ctl, adding socket\n");
             exit(1);
         }
+
+        conn->status = MORTISE_CONN_PROCESSING;
     }
 
     return 0;
@@ -134,7 +138,7 @@ int socket_check(int fd)
 {
     int ret;
     int code;
-    size_t len = sizeof(int);
+    socklen_t len = sizeof(int);
 
     ret = getsockopt(fd, SOL_SOCKET, SO_ERROR, &code, &len);
 
@@ -160,11 +164,21 @@ int signal_init()
     return 0;
 }
 
-int get_conn(int fd)
+int get_conn(int fd, struct mortise_conn **conn)
 {
-    struct mortise_conn *G_lipod_cons;
+    int i;
+    struct mortise_conn *mortise_conns = G_tenon->mortise_conns;
 
-    return 0;
+    for (i = 0; i < G_tenon->config->mortise_conn_count; i++)
+    {
+        if (mortise_conns[i].socket_fd == fd)
+        {
+            *conn = &(mortise_conns[i]);
+            return 0;
+        }
+    }
+
+    return -1;
 }
 
 int main(int argc, char *argv[])
@@ -175,11 +189,12 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    struct sockaddr_in target = str2sa((char *) argv[1]); // convert target information
-    int maxconn = atoi(argv[2]); //number of sockets to connect to the target
-
     // internal variables definition
     int i, count, datacount;
+
+    G_tenon = malloc(sizeof(struct tenon));
+
+    struct sockaddr_in target = str2sa(argv[1]); // convert target information
 
     char message[] = "hello\n\n";
     int messagelength = strlen(message);
@@ -196,8 +211,15 @@ int main(int argc, char *argv[])
     struct timeval current;
     float elapsedtime;
 
+    G_tenon->config = malloc(sizeof(struct tenon_config));
+    struct tenon_config *config = G_tenon->config;
+    config->mortise_ip = target.sin_addr.s_addr;
+    config->mortise_port = target.sin_port;
+    config->mortise_conn_count = atoi(argv[2]); //number of sockets to connect to the target
 
-    struct mortise_conn *G_lipod_cons = malloc(sizeof(struct mortise_conn) * maxconn);
+    G_tenon->mortise_conns = malloc(sizeof(struct mortise_conn) * G_tenon->config->mortise_conn_count);
+
+    struct mortise_conn *mortise_conns = G_tenon->mortise_conns;
 
     signal_init();
 
@@ -209,18 +231,18 @@ int main(int argc, char *argv[])
     static struct epoll_event event_mask;
 
     // create the special epoll file descriptor
-    epfd = epoll_create(maxconn);
+    epfd = epoll_create(G_tenon->config->mortise_conn_count);
 
     // allocate enough memory to store all the events in the "events" structure
-    if (NULL == (events = calloc(maxconn, sizeof(struct epoll_event))))
+    if (NULL == (events = calloc((size_t)G_tenon->config->mortise_conn_count, sizeof(struct epoll_event))))
     {
         perror("calloc events");
         exit(1);
     }
 
     // create and connect as much as needed
-    for (i = 0; i < maxconn; i++)
-        if (create_and_connect(target, (int *) epfd, (struct mortise_conn*)&G_lipod_cons[i]) != 0)
+    for (i = 0; i < G_tenon->config->mortise_conn_count; i++)
+        if (create_and_connect(target, (int *) epfd, &mortise_conns[i]) != 0)
         {
             perror("create and connect");
             exit(1);
@@ -247,12 +269,13 @@ int main(int argc, char *argv[])
          *
          * count contain the number of returned events
          */
-        count = epoll_wait(epfd, events, maxconn, 1000);
+        count = epoll_wait(epfd, events, G_tenon->config->mortise_conn_count, 1000);
 
         for (i = 0; i < count; i++)
         {
             if (events[i].events & EPOLLOUT) //socket is ready for writing
             {
+                printf("sock %d \n", events[i].data.fd);
                 // verify the socket is connected and doesn't return an error
                 if (socket_check(events[i].data.fd) != 0)
                 {
@@ -261,6 +284,12 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
+                    struct mortise_conn *conn;
+                    if (get_conn(events[i].data.fd, &conn) == 0)
+                    {
+                        conn->status = MORTISE_CONN_CONNECTED;
+                    }
+
                     if ((datacount = send(events[i].data.fd, message, messagelength, 0)) < 0)
                     {
                         stats.error++;
@@ -328,7 +357,10 @@ int main(int argc, char *argv[])
                 else
                     stats.nbsock--;
 
-                if (create_and_connect(target, (int *) epfd, (struct mortise_conn*)&G_lipod_cons[0]) != 0)
+                struct mortise_conn *conn;
+                get_conn(events[i].data.fd, conn);
+
+                if (create_and_connect(target, (int *) epfd, conn) != 0)
                 {
                     perror("create and connect");
                     continue;
@@ -355,18 +387,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

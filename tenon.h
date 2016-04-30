@@ -24,34 +24,32 @@
 #define MORTISE_CONN_CONNECTED 2
 
 //event type define
-#define EVENT_TYPE_MAO_CONN 1
+#define EVENT_TYPE_MORTISE_CONN 1
 
 struct mortise_conn
 {
     int socket_fd;
-    char *mortise_ip[15]; //todo int is well
-    unsigned int mortise_port;
+    uint32_t mortise_ip;
+    in_port_t mortise_port;
     unsigned int local_port;
     int status;
 };
 
-extern struct mortise_conn *G_mortise_cons[];
-
 struct tenon_config
 {
     int mortise_conn_count;
-    char *mortise_ip[15]; //todo int is well
-    unsigned int mortise_port;
+    uint32_t mortise_ip;
+    in_port_t mortise_port;
 };
 
 struct tenon
 {
-    struct mortise_conn *mortise_conns[];
     struct tenon_config *config;
     int mortise_conn_count;
+    struct mortise_conn *mortise_conns;
 };
 
-extern struct tenon G_tenon;
+struct tenon *G_tenon;
 
 int main(int argc, char *argv[]);
 

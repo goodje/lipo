@@ -19,6 +19,7 @@ link_libraries(
 set(SOURCE_LIB
         lib_socket.c
         lib_socket.h
+        network/http.c network/http.h event/event.h event/event_epoll.c
         )
 
 set(SOURCE_FILES_MORTISE
@@ -33,5 +34,14 @@ set(SOURCE_FILES_TENON
 )
 add_executable(tenon ${SOURCE_FILES_TENON} ${SOURCE_LIB})
 target_link_libraries(tenon ${CMAKE_THREAD_LIBS_INIT})
+
+
+#----- test
+set(SOURCE_FILES_TEST
+        test.c
+        test.h
+)
+add_executable(test ${SOURCE_FILES_TEST} ${SOURCE_LIB})
+target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
 
 #add_library(liblipo SHARED ${SOURCE_FILES_SERVER})

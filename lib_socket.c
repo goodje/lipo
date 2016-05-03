@@ -32,7 +32,7 @@ struct sockaddr_in str2sa(char *str)
     int port;
 
     bzero(&sa, sizeof(sa));
-    str = strdup(str);
+    str = strdup((const char*)str);
     if ((c = strrchr(str, ':')) != NULL)
     {
         *c++ = 0;

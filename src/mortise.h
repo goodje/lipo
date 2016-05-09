@@ -18,7 +18,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-#include "lib_socket.h"
+#include "network/lib_socket.h"
 
 void main();
 

@@ -1,0 +1,72 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+
+# generic ignores
+*.deps
+*.dirstamp
+*.libs
+*.log
+*.trs
+*.suo
+*.pyc
+*.cache
+*.user
+*.ipch
+*.sdf
+*.jar
+*_ReSharper*
+*.opensdf
+*.swp
+*.hi
+*~
+
+
+
+
+
+
+
+
+
+.*project
+.idea
+gen-*
+CmakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+Makefile.in
+.sonar
+.DS_Store
+.svn
+.vagrant

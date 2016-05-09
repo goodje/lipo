@@ -17,7 +17,7 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <pthread.h>
-#include "lib_socket.h"
+#include "network/lib_socket.h"
 
 #define MORTISE_CONN_DEFAULT 0
 #define MORTISE_CONN_PROCESSING 1

@@ -25,6 +25,7 @@ static DWORD WINAPI ClientWorkerThread(LPVOID lpParameter)
 	DWORD SendBytes, RecvBytes;
 	DWORD Flags;
 	BOOL bRet;
+	char log_str[128];
 
 	while (TRUE)
 	{
@@ -41,6 +42,8 @@ static DWORD WINAPI ClientWorkerThread(LPVOID lpParameter)
 
 			PerIoData->wsaBuf.len = 1000;
 			WSARecv(PerHandleData->Socket, &(PerIoData->wsaBuf), 1, &RecvBytes, &Flags, &(PerIoData->wsaOverlapped), NULL);
+			sprintf(log_str, "receive data: %s\n", PerIoData->wsaBuf);
+			OutputDebugString(log_str);
 		}
 	}
 
@@ -50,6 +53,9 @@ static DWORD WINAPI ClientWorkerThread(LPVOID lpParameter)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+	char motise_host[128] = "192.168.13.231";
+	unsigned int motise_port = 6424;
+
 	char log_str[128];
 
 	WSADATA WsaDat;
@@ -61,8 +67,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Step 2 - Find how many processors.
 	SYSTEM_INFO systemInfo;
 	GetSystemInfo(&systemInfo);
-
-	//OutputDebugString(systemInfo.dwNumberOfProcessors);
 
 	// Step 3 - Create worker threads.
 	for (int i = 0; i < (int)systemInfo.dwNumberOfProcessors; i++)
@@ -78,12 +82,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	pPerHandleData->Socket = Socket;
 
 	struct hostent *host;
-	host = gethostbyname("localhost");
+	host = gethostbyname(motise_host);
 
 	SOCKADDR_IN SockAddr;
 	SockAddr.sin_family = AF_INET;
 	SockAddr.sin_addr.s_addr = *((unsigned long*)host->h_addr);
-	SockAddr.sin_port = htons(8888);
+	SockAddr.sin_port = htons(motise_port);
 
 	// Step 5 - Associate the socket with the I/O completion port.
 	CreateIoCompletionPort((HANDLE)Socket, hCompletionPort, (DWORD)pPerHandleData, 0);

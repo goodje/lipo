@@ -11,7 +11,7 @@
 int event_engine_init(struct event_engine *engine, int size)
 {
     engine->fd = epoll_create(size);
-    engine->event_engine = EVENT_EPOLL;
+    engine->engine_type = EVENT_EPOLL;
     engine->init = &event_engine_init;
 //    engine->free = &event_engine_free;
     engine->add_event = &event_add_event;

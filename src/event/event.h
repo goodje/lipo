@@ -33,7 +33,7 @@ struct event
 
 struct event_engine
 {
-    int event_engine;
+    int engine_type;
     int fd; //todo maybe not need
     int (*init)(struct event_engine *engine, int size);
     int (*free)(struct event_engine *engine);

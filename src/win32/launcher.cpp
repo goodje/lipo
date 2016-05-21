@@ -24,16 +24,14 @@ static DWORD WINAPI ClientWorkerThread(LPVOID lpParameter)
 	LPPER_IO_DATA PerIoData;
 	DWORD SendBytes, RecvBytes;
 	DWORD Flags;
-	BOOL bRet;
 	char log_str[128];
 
 	while (TRUE)
 	{
-		bRet = GetQueuedCompletionStatus(hCompletionPort, &bytesCopied, (LPDWORD)&PerHandleData, (LPOVERLAPPED*)&PerIoData, INFINITE);
-
-		if (bytesCopied == 0)
+		if (GetQueuedCompletionStatus(hCompletionPort, &bytesCopied, (LPDWORD)&PerHandleData, (LPOVERLAPPED*)&PerIoData, INFINITE) == 0)
 		{
-			break;
+			sprintf(log_str, "GetQueuedCompletionStatus filed.\n");
+			OutputDebugString(log_str);
 		}
 		else
 		{
@@ -48,6 +46,12 @@ static DWORD WINAPI ClientWorkerThread(LPVOID lpParameter)
 	}
 
 	return 0;
+}
+
+static DWORD WINAPI ClientConnHandle()
+{
+
+
 }
 
 
@@ -76,10 +80,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// Step 4 - Create a socket.
-	SOCKET Socket = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+	SOCKET mortise_conn = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+
+	unsigned long lNonBlocking = 1;
+	if (ioctlsocket(mortise_conn, FIONBIO, &lNonBlocking) != NO_ERROR)
+	{
+		sprintf(log_str, "ioctlsocket failed with error: %d\n", GetLastError());
+		OutputDebugString(log_str);
+		exit(-1);
+	}
 
 	PER_HANDLE_DATA *pPerHandleData = new PER_HANDLE_DATA;
-	pPerHandleData->Socket = Socket;
+	pPerHandleData->Socket = mortise_conn;
 
 	struct hostent *host;
 	host = gethostbyname(motise_host);
@@ -90,9 +103,87 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SockAddr.sin_port = htons(motise_port);
 
 	// Step 5 - Associate the socket with the I/O completion port.
-	CreateIoCompletionPort((HANDLE)Socket, hCompletionPort, (DWORD)pPerHandleData, 0);
+	CreateIoCompletionPort((HANDLE)mortise_conn, hCompletionPort, (DWORD)pPerHandleData, 0);
 
-	WSAConnect(Socket, (SOCKADDR*)(&SockAddr), sizeof(SockAddr), NULL, NULL, NULL, NULL);
+
+	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+	DWORD EventTotal = 0;
+	EventArray[EventTotal] = WSACreateEvent();
+	if ((WSAEventSelect(mortise_conn, EventArray[EventTotal], FD_CONNECT | FD_READ | FD_WRITE | FD_CLOSE) == SOCKET_ERROR))
+	{
+		sprintf(log_str, "WSAEventSelect error: %d\n", WSAGetLastError());
+		OutputDebugString(log_str);
+	}
+
+	EventTotal++;
+	int res;
+	int index;
+
+
+	if (WSAConnect(mortise_conn, (SOCKADDR*)(&SockAddr), sizeof(SockAddr), NULL, NULL, NULL, NULL) != 0)
+	{
+		int err_no = WSAGetLastError();
+		if (err_no != WSAEWOULDBLOCK)
+		{
+			sprintf(log_str, "WSAConnect error: %d\n", err_no);
+			OutputDebugString(log_str);
+			exit(-1);
+		}
+	}
+
+	WSANETWORKEVENTS NetworkEvents;
+
+	while (TRUE)
+	{
+		if ((index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE, WSA_INFINITE, FALSE)) == WSA_WAIT_FAILED)
+		{
+			sprintf(log_str, "WSAWaitForMultipleEvents failed with error: %d\n", WSAGetLastError());
+			OutputDebugString(log_str);
+			exit(-1);
+		}
+
+		if ((index != WSA_WAIT_FAILED) && (index != WSA_WAIT_TIMEOUT))
+		{
+			res = WSAEnumNetworkEvents(mortise_conn, EventArray[index - WSA_WAIT_EVENT_0], &NetworkEvents);
+
+			if (NetworkEvents.lNetworkEvents & FD_CONNECT)
+			{
+
+				sprintf(log_str, "FD_CONNECT \n");
+				OutputDebugString(log_str);
+			}
+
+			if (NetworkEvents.lNetworkEvents & FD_READ)
+			{
+
+				sprintf(log_str, "FD_READ \n");
+				OutputDebugString(log_str);
+			}
+
+			if (NetworkEvents.lNetworkEvents & FD_WRITE)
+			{
+				sprintf(log_str, "FD_WRITE \n");
+				OutputDebugString(log_str);
+			}
+
+			if (NetworkEvents.lNetworkEvents & FD_CLOSE)
+			{
+				if (NetworkEvents.iErrorCode[FD_CLOSE_BIT] != 0)
+				{
+					sprintf(log_str, "FD_CLOSE failed with error: %d\n", NetworkEvents.iErrorCode[FD_CLOSE_BIT]);
+					OutputDebugString(log_str);
+				}
+				else
+				{
+					sprintf(log_str, "FD_CLOSE is OK!!! : %d\n ", NetworkEvents.iErrorCode[FD_CLOSE_BIT]);
+					OutputDebugString(log_str);
+				}
+			}
+		}
+	}
+	
+
+	/*
 
 	static char buffer[1024];
 	memset(buffer, 0, 1023);
@@ -109,8 +200,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SecureZeroMemory((PVOID)&pPerIoData->wsaOverlapped, sizeof(pPerIoData->wsaOverlapped));
 	pPerIoData->wsaOverlapped.hEvent = WSACreateEvent();
 
-	WSARecv(Socket, &pPerIoData->wsaBuf, 1, &dwReceivedBytes, &dwFlags, &pPerIoData->wsaOverlapped, NULL);
-	std::cout << pPerIoData->wsaBuf.buf;
+	WSARecv(mortise_conn, &pPerIoData->wsaBuf, 1, &dwReceivedBytes, &dwFlags, &pPerIoData->wsaOverlapped, NULL);
+	std::cout << pPerIoData->wsaBuf.buf;*/
 
 	for (;;)
 	{
@@ -120,17 +211,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			sprintf(log_str, "Winsock error code: %d.\nServer disconnected!\n", nError);
 			OutputDebugString(log_str);
 			
-			shutdown(Socket, SD_SEND);
-			closesocket(Socket);
+			//shutdown(mortise_conn, SD_SEND);
+			//closesocket(mortise_conn);
 
-			exit(-1);
+			//exit(-1);
 		}
 
 		Sleep(1000);
 	}
 
 	delete pPerHandleData;
-	delete pPerIoData;
+	//delete pPerIoData;
 	WSACleanup();
 
 	return 0;

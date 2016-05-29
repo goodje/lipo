@@ -5,9 +5,11 @@
 
 #ifdef _WIN32
 
-#include <iostream>
-#include <winsock2.h>
-#pragma comment(lib, "Ws2_32.lib")
+//#include <windows.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "dashboard.h"
 
 #endif
 

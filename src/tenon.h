@@ -12,30 +12,19 @@
 #include <netdb.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/epoll.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include "event/lipo_event.h"
+#include "event/event_manage.h"
 #include "network/lib_socket.h"
 
-#define MORTISE_CONN_DEFAULT 0
-#define MORTISE_CONN_PROCESSING 1
-#define MORTISE_CONN_CONNECTED 2
+#include "tenon/tenon_mortise.h"
+#include "logging/logging.h"
 
-//event type define
-#define EVENT_TYPE_MORTISE_CONN 1
 
-struct mortise_conn
-{
-    int socket_fd;
-    uint32_t mortise_ip;
-    in_port_t mortise_port;
-    unsigned int local_port;
-    int status;
-};
-
-struct tenon_config
+struct _tenon_config
 {
     int mortise_conn_count;
     uint32_t mortise_ip;
@@ -44,12 +33,16 @@ struct tenon_config
 
 struct tenon
 {
-    struct tenon_config *config;
+    int running;
+    struct _tenon_config config;
     int mortise_conn_count;
-    struct mortise_conn *mortise_conns;
+    struct tenon_mortise_conn *mortise_conns;
+    struct event_engine *event_engine;
+    struct event_manage *event_manage;
+    struct logging *log;
 };
 
-struct tenon *G_tenon;
+struct tenon *Tenon;
 
 int main(int argc, char *argv[]);
 

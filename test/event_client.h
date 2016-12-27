@@ -5,7 +5,7 @@
 #ifndef LEARNCPP_TEST_EVENT_CLIENT_H
 #define LEARNCPP_TEST_EVENT_CLIENT_H
 
-#include "../src/event/event.h"
+#include "../src/event/lipo_event.h"
 
 int main(int argc, char *argv[]);
 

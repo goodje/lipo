@@ -6,15 +6,19 @@
 #define LEARNCPP_HTTP_H
 
 
-struct http
+struct http_client
 {
     char *host[256];
     char fd;
     char ssl;
-    int (*http_request)(char *url[256]);
+    int (*http_connect)(char *url);
+    int (*http_request)(char *url);
+    int (*http_close)();
 };
 
-int http_init(struct http *client);
-int http_request(char *url[256]);
+int http_init(struct http_client *client);
+int http_connect(char *url);
+int http_request(char *url);
+int http_close();
 
 #endif //LEARNCPP_HTTP_H
